@@ -393,7 +393,7 @@ class ERLC(commands.Cog):
         if command_response[0] == 200:
             await ctx.send(
                 embed=discord.Embed(
-                    title="<:success:1163149118366040106> Successfully Sent",
+                    title=f"{self.bot.emoji_controller.get_emoji('success')} Successfully Sent",
                     description="This PM has been sent to the server!",
                     color=GREEN_COLOR,
                 )
