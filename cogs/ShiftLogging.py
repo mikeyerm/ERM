@@ -1347,8 +1347,8 @@ class ShiftLogging(commands.Cog):
         shift_types = configItem.get("shift_types", {}).get("types", [])
         msg = None
         shift_type_item = None
-        if shift_types:
-            if type.lower() not in [t["name"].lower() for t in shift_types]:
+        if shift_types and len(shift_types) >= 1:
+            if type.lower() not in [ t["name"].lower() for t in shift_types ]:
                 msg = await ctx.send(
                     embed=discord.Embed(
                         title="Incorrect Shift Type",
