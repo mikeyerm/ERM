@@ -21,6 +21,7 @@ from tasks.change_status import change_status
 from tasks.check_whitelisted_car import check_whitelisted_car
 from tasks.sync_weather import sync_weather
 from tasks.iterate_conditions import iterate_conditions
+from tasks.advance_loa import advance_loa
 from utils.emojis import EmojiController
 
 from utils.log_tracker import LogTracker
@@ -286,7 +287,7 @@ class Bot(commands.AutoShardedBot):
         iterate_ics.start(bot)
         # GDPR.start()
         iterate_prc_logs.start(bot)
-        # statistics_check.start(bot)
+        statistics_check.start(bot)
         tempban_checks.start(bot)
         check_whitelisted_car.start(bot)
         if self.environment != "CUSTOM":
@@ -295,6 +296,7 @@ class Bot(commands.AutoShardedBot):
         sync_weather.start(bot)
         iterate_conditions.start(bot)
         check_infractions.start(bot)
+        advance_loa(bot)
         logging.info("All tasks are now running!")
 
 
