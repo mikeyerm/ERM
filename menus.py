@@ -10998,6 +10998,14 @@ class AdministratedShiftMenu(discord.ui.View):
                         color=BLANK_COLOR,
                     )
                 )
+            except OverflowError:
+                return await self.modal.interaction.followup.send(
+                    embed=discord.Embed(
+                        title="Invalid Time",
+                        description="You can't add more than 6 months in shift time.",
+                        color=BLANK_COLOR,
+                    )
+                )
 
             await self._manipulate_shift_time(interaction.message, "add", converted)
             settings = await self.bot.settings.find_by_id(interaction.guild.id)
