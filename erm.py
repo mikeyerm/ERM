@@ -259,7 +259,7 @@ class Bot(commands.AutoShardedBot):
             bot.is_synced = True
 
             # we do this so the bot can get a cache of things before we spam discord with fetches
-            # asyncio.create_task(self.start_tasks())
+            asyncio.create_task(self.start_tasks())
             # TEMPORARY
             
             async for document in self.views.db.find({}):
@@ -279,14 +279,14 @@ class Bot(commands.AutoShardedBot):
             self.setup_status = True
 
     async def start_tasks(self):
-        logging.info("Starting tasks after 10 minute delay...")
+        #logging.info("Starting tasks after 10 minute delay...")
         # await asyncio.sleep(600)  # 10 mins
         check_reminders.start(bot)
         check_loa.start(bot)
         iterate_ics.start(bot)
         # GDPR.start()
         iterate_prc_logs.start(bot)
-        # statistics_check.start(bot)
+        statistics_check.start(bot)  #====WILL BE OPTIMIZED FOR BETTER PERFORMANCE====
         tempban_checks.start(bot)
         check_whitelisted_car.start(bot)
         if self.environment != "CUSTOM":
