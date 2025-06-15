@@ -347,6 +347,57 @@ class APIRoutes:
                 status_code=500, detail=f"Internal server error: {str(e)}"
             )
 
+    async def POST_notify_new_application(
+        self, authorization: Annotated[str | None, Header()], request: Request
+    ):
+        if not authorization:
+            raise HTTPException(status_code=401, detail="Invalid authorization")
+
+        if not await validate_authorization(self.bot, authorization):
+            raise HTTPException(
+                status_code=401, detail="Invalid or expired authorization."
+            )
+
+        json_data = await request.json()
+        guild_id = json_data["guild_id"]
+        channel_id = json_data["channel_id"]
+        user_id = json_data["user_id"]
+        application_name = json_data["application_name"]
+
+        guild = self.bot.get_guild(guild_id) or await self.bot.fetch_guild(guild_id)
+        if not guild:
+            raise HTTPException(status_code=404, detail="Guild not found")
+
+        channel = guild.get_channel(channel_id)
+        if not channel:
+            raise HTTPException(status_code=404, detail="Channel not found")
+
+        embed = discord.Embed(
+            title=f"Application Received",
+            description="",
+            color=BLANK_COLOR,
+        )
+        embed.add_field(
+            name="Details",
+            value=(
+                f"> **Application Name:** {application_name}\n"
+                f"> **Submitted By:** <@{user_id}>\n"
+                f"> **User ID:** {user_id}\n"
+            ),
+            inline=False,
+        )
+        embed.timestamp = datetime.datetime.now(pytz.utc)
+        embed.set_author(
+            name=guild.name,
+            icon_url=guild.icon.url if guild.icon else None,
+        )
+
+        try:
+            await channel.send(embed=embed)
+            return {"op": 1, "code": 200}
+        except discord.HTTPException as e:
+            raise HTTPException(status_code=500, detail=f"Failed to send message: {str(e)}")
+
     async def POST_send_staff_request(
         self, authorization: Annotated[str | None, Header()], request: Request
     ):
@@ -598,6 +649,10 @@ class APIRoutes:
         accepted_by = json_data.get("accepted_by")
         s_loa_item = await self.bot.loas.find_by_id(s_loa)
         s_loa = s_loa_item
+        if s_loa.get('denied'):
+            raise HTTPException(
+                status_code=400, detail="This LOA has already been denied."
+            )
 
         # fetch the actual accept roles
         guild_id = s_loa["guild_id"]
@@ -629,6 +684,10 @@ class APIRoutes:
         reason = json_data.get("reason", "No reason provided.")
         s_loa_item = await self.bot.loas.find_by_id(s_loa)
         s_loa = s_loa_item
+        if s_loa.get('accepted'):
+            raise HTTPException(
+                status_code=400, detail="This LOA has already been accepted."
+            )
 
         self.bot.dispatch("loa_deny", s_loa=s_loa, denied_by=denied_by, reason=reason)
 
