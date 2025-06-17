@@ -102,11 +102,14 @@ async def check_whitelisted_car(bot):
             if not exotic_roles:
                 continue
 
-            # Fetch data concurrently
-            players, vehicles = await asyncio.gather(
-                bot.prc_api.get_server_players(guild_id),
-                bot.prc_api.get_server_vehicles(guild_id),
-            )
+            try:
+                players, vehicles = await asyncio.gather(
+                    bot.prc_api.get_server_players(guild_id),
+                    bot.prc_api.get_server_vehicles(guild_id),
+                )
+            except Exception as e:
+                logging.error(f"Failed to fetch server data for guild {guild_id}: {e}")
+                continue
 
             player_lookup = {p.username: p for p in players}
 
