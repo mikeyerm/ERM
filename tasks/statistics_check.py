@@ -12,20 +12,32 @@ from utils.prc_api import Player, ServerStatus
 from utils.utils import fetch_get_channel
 
 
-async def update_channel(guild, channel_id, stat_config, placeholders):
+async def update_channel(bot, guild, channel_id, stat_config, placeholders):
     try:
         channel = await fetch_get_channel(guild, int(channel_id))
         if channel:
             format_string = stat_config["format"]
-            for key, value in placeholders.items():
-                format_string = format_string.replace(f"{{{key}}}", str(value))
+            format_string = format_string.format(**placeholders)
+
+            logging.info(f"Current name: '{channel.name}', New name: '{format_string}'")
+            
+            bot_member = guild.get_member(bot.user.id)
+            permissions = channel.permissions_for(bot_member)
+            if not permissions.manage_channels:
+                logging.error(f"Missing 'Manage Channels' permission for channel {channel_id} in guild {guild.id}")
+                return
 
             if channel.name != format_string:
-                await channel.edit(name=format_string)
-                logging.info(f"Updated channel {channel_id} in guild {guild.id}")
+                try:
+                    await channel.edit(name=format_string)
+                    logging.info(f"Successfully updated channel {channel_id} to: {format_string}")
+                except discord.errors.Forbidden:
+                    logging.error(f"Forbidden: Bot lacks permissions to edit channel {channel_id}")
+                except discord.errors.HTTPException as http_err:
+                    logging.error(f"HTTP Error updating channel {channel_id}: {http_err}")
             else:
                 logging.debug(
-                    f"Skipped update for channel {channel_id} in guild {guild.id} - no changes needed"
+                    f"Skipped update - no changes needed for channel {channel_id} in guild {guild.id}"
                 )
         else:
             logging.error(f"Channel {channel_id} not found in guild {guild.id}")
@@ -93,7 +105,7 @@ async def statistics_check(bot):
         }
 
         tasks = [
-            update_channel(guild, channel_id, stat_config, placeholders)
+            update_channel(bot, guild, channel_id, stat_config, placeholders)
             for channel_id, stat_config in statistics.items()
         ]
         await asyncio.gather(*tasks)
