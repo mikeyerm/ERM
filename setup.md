@@ -41,3 +41,8 @@
 python -m pip install -r <paste>
 ```
 5. Press the `enter` key.
+
+<h2 align="center">🔑 Setup .env</h2>
+
+1. Open File Explorer in the ERM Folder
+2. Duplicate the file named `.env.template` into another file named `.env`
