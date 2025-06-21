@@ -46,3 +46,35 @@ python -m pip install -r <paste>
 
 1. Open File Explorer in the ERM Folder
 2. Duplicate the file named `.env.template` into another file named `.env`
+3. Fill out the fields. **Certain fields will have documentation on how to fill out below.**
+   
+<h4 align="center">MONGO_URL</h2>
+
+1. Create a MongoDB account ([signup page](https://www.mongodb.com/cloud/atlas/register))
+2. Build a Cluster on the dashboard
+3. Open the dashboard
+4. Select Connect on the cluster you want to use
+5. Select a user and password you want to use **(REMEMBER THIS)**
+6. Click `Choose a Connection Method`
+7. Select `Drivers`
+8. Find the piece of code that says something like:
+
+```
+mongodb+srv://<db_user>:<db_password>@mycluster.<random>.mongodb.net/?retryWrites=true&w=majority&appName=<yourclustername>
+```
+
+9. Copy the part saying `srv://<db_user>:<db_password> etc.`
+10. That is your MONGO_URL.
+
+<h4 align="center">ENVIRONMENT</h2>
+
+**PRODUCTION** or **DEVELOPMENT** *(if you dont know which to use, use PRODUCTION)*
+
+<h4 align="center">SENTRY_URL</h2>
+[How to Setup a Sentry App](https://www.youtube.com/watch?v=A64tezVRSK8)
+
+*im not writing all this shit out*
+
+<h4 align="center">BLOXLINK_API_KEY</h2>
+Bloxlink API Key
+
