@@ -10,3 +10,5 @@
   * Install On [The Official Python Website](https://www.python.org/downloads/)
 * Finish Later
 
+<h2 align="center">💉 Install Python Requirements</h2>
+❗If you just installed python, a computer restart may be required!
