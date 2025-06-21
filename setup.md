@@ -4,6 +4,11 @@
 
 <h1 align="center">🤖 Setup Your Own Instance</h1>
 
+* ⚠️ **WARNING:** Whenever you want ERM to run, you must be running the program. 
+
+* ℹ️It is reccomended to have a dedicated computer/server just to host programs. **Running on person machines is not reccomended.**
+
+
 <h2 align="center">💉 Prerequisites</h2>
 
 * Python (Reccomended Python 3.13)
