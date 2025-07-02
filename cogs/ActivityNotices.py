@@ -132,7 +132,7 @@ class ActivityCoreCommands:
         return schema
 
     async def core_command_admin(
-        self, ctx: commands.Context, request_type_object: str, victim: discord.Member
+        self, ctx: commands.Context, request_type_object: str, victim: discord.Member, starting: str = None
     ):
         settings = await self.bot.settings.find_by_id(ctx.guild.id)
         if not settings:
@@ -143,6 +143,20 @@ class ActivityCoreCommands:
                     color=BLANK_COLOR,
                 )
             )
+        current_timestamp = int(datetime.datetime.now().timestamp())
+        if starting:
+            try:
+                start_after_seconds = time_converter(starting)
+                current_timestamp += start_after_seconds
+            except ValueError:
+                return await ctx.send(
+                    embed=discord.Embed(
+                        title="Incorrect Time",
+                        description=f"The time you provided was incorrect.",
+                        color=BLANK_COLOR,
+                    )
+                )
+
 
         if (
             not settings.get("staff_management")
@@ -282,6 +296,7 @@ class ActivityCoreCommands:
                     reason,
                     return_bypass=True,
                     override_victim=victim,
+                    starting=starting,
                 )
                 return await respond(
                     embed=discord.Embed(
@@ -842,7 +857,26 @@ class StaffManagement(commands.Cog):
     @app_commands.describe(starting="When would you like to start your LOA? (s/m/h/d)")
     async def loa_request(self, ctx, time, *, reason, starting: str = None):
         await self.core_commands.core_command_request(
-            ctx, "loa", time, reason, starting=starting
+            ctx, "LOA", time, reason, starting=starting
+        )
+
+    @commands.guild_only()
+    @loa.command(
+        name="add",
+        description="Create a Leave of Absence for a staff member",
+        extras={"category": "Staff Management"},
+        with_app_command=True,
+    )
+    @is_admin()
+    @app_commands.describe(member="The staff member to create an LOA for.")
+    @app_commands.describe(time="How long the LOA will last (s/m/h/d)")
+    @app_commands.describe(reason="The reason for the LOA")
+    @app_commands.describe(starting="When the LOA should start (defaults to now) (s/m/h/d)")
+    async def loa_add(
+        self, ctx: commands.Context, member: discord.Member, time: str, *, reason: str, starting: str = None
+    ):
+        await self.core_commands.core_command_request(
+            ctx, "LOA", time, reason, override_victim=member.id, starting=starting
         )
 
     @commands.guild_only()
@@ -857,10 +891,9 @@ class StaffManagement(commands.Cog):
         member="Who's LOA would you like to administrate? Specify a Discord user."
     )
     async def loa_admin(self, ctx, member: discord.Member):
-        await log_command_usage(self.bot, ctx.guild, ctx.author, f"LOA Admin: {member}")
-
-        return await self.core_commands.core_command_admin(ctx, "loa", member)
+        await self.core_commands.core_command_admin(ctx, "LOA", member)
 
 
 async def setup(bot):
     await bot.add_cog(StaffManagement(bot))
+
