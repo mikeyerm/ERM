@@ -1327,7 +1327,7 @@ class ShiftLogging(commands.Cog):
     )
     @require_settings()
     @app_commands.autocomplete(type=shift_type_autocomplete)
-    @is_management()
+    @is_admin()
     async def duty_shifts(
         self, ctx: commands.Context, user: discord.User, type: str = "Default"
     ):
