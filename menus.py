@@ -4740,17 +4740,65 @@ class ActivityNoticeAdministration(discord.ui.View):
             [
                 ("reason", discord.ui.TextInput(label="Reason")),
                 ("duration", discord.ui.TextInput(label="Duration")),
+                ("starting", discord.ui.TextInput(label="Starting (optional)", required=False)),
             ],
             {"ephemeral": True},
         )
 
         await interaction.response.send_modal(self.modal)
         await self.modal.wait()
-        self.stored_interaction = self.modal.interaction
-        self.value = "create"
+         
+        reason = self.modal.reason.value
+        duration = self.modal.duration.value
+        starting = self.modal.starting.value or None   
 
-        await self.visual_close(interaction.message)
-        self.stop()
+        if not reason or not duration:
+            await interaction.followup.send(
+                embed=discord.Embed(
+                    title="Creation Failed",
+                    description="Reason and Duration are required fields.",
+                    color=BLANK_COLOR,
+                ),
+                ephemeral=True,
+            )
+            return
+
+         
+        class MockContext:
+            def __init__(self, interaction: discord.Interaction):
+                self.interaction = interaction
+                self.guild = interaction.guild
+                self.author = interaction.user
+               
+                self.send = interaction.followup.send
+
+        mock_ctx = MockContext(interaction)
+
+        
+        staff_management_cog = self.bot.get_cog("StaffManagement")
+        if staff_management_cog and hasattr(staff_management_cog, 'core_commands'):
+             await staff_management_cog.core_commands.core_command_request(
+                mock_ctx, "LOA", duration, reason, override_victim=self.victim, starting=starting
+             )
+             await interaction.followup.send(
+                embed=discord.Embed(
+                    title="LOA Creation Successful",
+                    description=f"Successfully created an LOA for <@{self.victim}>.",
+                    color=GREEN_COLOR,
+                ),
+                ephemeral=True,
+            )
+        else:
+             await interaction.followup.send(
+                embed=discord.Embed(
+                    title="Internal Error",
+                    description="Could not access core command logic.",
+                    color=RED_COLOR,
+                ),
+                ephemeral=True,
+            )
+
+        # The view will be managed by the calling loa_admin command, so no need to stop it here.
 
     @discord.ui.button(label="List", style=discord.ButtonStyle.secondary)
     async def list_notices(
@@ -6412,7 +6460,7 @@ class ShiftConfiguration(AssociationConfigurationView):
                     f"> **Nickname Prefix:** {data.get('nickname') or 'None'}\n"
                     f"> **On-Duty Roles:** {', '.join(['<@&{}>'.format(r) for r in data.get('role', [])]) or 'Not set'}\n"
                     f"> **Access Roles:** {', '.join(['<@&{}>'.format(r) for r in data.get('access_roles', [])]) or 'Not set'}\n\n\n"
-                    f"Access Roles are roles that are able to freely use this Shift Type and are able to go on-duty as this Shift Type. If an access role is selected, an individual must have it to go on-duty with this Shift Type."
+                    f"Access Roles are roles that are able to freely use this Shift Type and are able to go on-duty with this Shift Type. If an access role is selected, an individual must have it to go on-duty with this Shift Type."
                 ),
                 color=BLANK_COLOR,
             )
@@ -9954,7 +10002,7 @@ class ShiftTypeCreator(discord.ui.View):
                 f"> **On-Duty Roles:** {', '.join(['<@&{}>'.format(r) for r in self.dataset.get('role', [])]) or 'Not set'}\n"
                 f"> **Break Roles:** {', '.join(['<@&{}>'.format(r) for r in self.dataset.get('break_roles', [])]) or 'Not set'}\n"
                 f"> **Access Roles:** {', '.join(['<@&{}>'.format(r) for r in self.dataset.get('access_roles', [])]) or 'Not set'}\n\n\n"
-                f"Access Roles are roles that are able to freely use this Shift Type and are able to go on-duty as this Shift Type. If an access role is selected, an individual must have it to go on-duty with this Shift Type."
+                f"Access Roles are roles that are able to freely use this Shift Type and are able to go on-duty with this Shift Type. If an access role is selected, an individual must have it to go on-duty with this Shift Type."
             ),
             color=BLANK_COLOR,
         )
