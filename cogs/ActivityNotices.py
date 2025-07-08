@@ -576,7 +576,11 @@ class ActivityCoreCommands:
             "denied": False,
             "voided": False,
             "reason": reason,
+            "user_rolled": False  #===========UPDATED SCHEMA=============
         }
+        #We're updating the schema of LOA by adding 'user_rolled' parameter to keep the track of users who're rolled.
+        #If LOA is requested in advance then on approving LOA it won't add role then can be added later by bot when using a seperate discord.task which will be handling advance LOA's
+        #Logic will be updated in the `menus.py` to handle the future LOAs.
 
         new_schema = await self.send_activity_request(
             ctx.guild, staff_channel, member, schema
