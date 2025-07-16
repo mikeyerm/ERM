@@ -1352,7 +1352,7 @@ class ShiftLogging(commands.Cog):
         msg = None
         shift_type_item = None
         if shift_types and len(shift_types) >= 1:
-            if type.lower() not in [ t["name"].lower() for t in shift_types ]:
+            if type.lower() not in [ i["name"].lower() for i in shift_types ]:
                 msg = await ctx.send(
                     embed=discord.Embed(
                         title="Incorrect Shift Type",
@@ -1388,6 +1388,7 @@ class ShiftLogging(commands.Cog):
             if type.lower() == "default":
                 shift_type_item = {"name": "Default"}
             else:
+                shift_type_item = None
                 return await ctx.send(
                     embed=discord.Embed(
                         title="Incorrect Shift Type",
