@@ -990,10 +990,19 @@ class LOAMenu(discord.ui.View):
                 role = [
                     discord.utils.get(guild.roles, id=role) for role in self.loa_role
                 ]
-
-            for rl in role:
-                if rl not in user.roles:
-                    await user.add_roles(rl)
+            #Adding the logic to handle future LOAs approval
+            #if 'started_at' is for future then we're gonna skip adding roles
+            if s_loa.get("started_at") is not None:
+                if s_loa.get("started_at") < datetime.datetime.now(
+                    tz=datetime.timezone.utc
+                ):
+                    for rl in role:
+                        if rl not in user.roles:
+                            await user.add_roles(rl)
+                    #update the 'user_rolled' to 'true'
+                    s_loa["user_rolled"] = True
+                    await self.bot.loas.update_byt_id(s_loa)
+                #with the above logic, if the LOA is in the future, we won't add roles
 
             self.value = True
         except discord.HTTPException:
