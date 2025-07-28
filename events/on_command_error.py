@@ -11,7 +11,7 @@ from discord.ui import Button, View
 from discord.ext.commands import HybridCommandError
 from sentry_sdk import capture_exception, push_scope
 from aiohttp import ClientConnectorSSLError
-
+from decouple import config
 from utils.constants import BLANK_COLOR, RED_COLOR
 from utils.utils import error_gen, GuildCheckFailure
 from utils.prc_api import ServerLinkNotFound, ResponseFailure
@@ -289,21 +289,6 @@ class OnCommandError(commands.Cog):
                 discord.Forbidden,
             ),
         ):
-            if not do_not_send:
-                await ctx.send(
-                    embed=discord.Embed(
-                        title=f"{self.bot.emoji_controller.get_emoji('error')} Command Failure",
-                        description="The command you were attempting to run failed.\nContact ERM Support for assistance.",
-                        color=RED_COLOR,
-                    ).add_field(name="Error ID", value=f"`{error_id}`", inline=False),
-                    view=View().add_item(
-                        Button(
-                            label="Contact ERM Support",
-                            style=discord.ButtonStyle.link,
-                            url="https://discord.gg/FAC629TzBy",
-                        )
-                    ),
-                )
 
             with push_scope() as scope:
                 scope.set_tag("error_id", error_id)
@@ -324,8 +309,24 @@ class OnCommandError(commands.Cog):
                     }
                 )
 
-                capture_exception(error)
+                error_link = capture_exception(error)
 
+
+            if not do_not_send:
+                await ctx.send(
+                    embed=discord.Embed(
+                        title=f"{self.bot.emoji_controller.get_emoji('error')} Command Failure",
+                        description="The command you were attempting to run failed.\nContact ERM Support for assistance.",
+                        color=RED_COLOR,
+                    ).add_field(name="Error ID", value=f"[`{error_id}`]({config('SENTRY_BASE_URL') + error_link})", inline=False),
+                    view=View().add_item(
+                        Button(
+                            label="Contact ERM Support",
+                            style=discord.ButtonStyle.link,
+                            url="https://discord.gg/FAC629TzBy",
+                        )
+                    ),
+                )
 
 async def setup(bot):
     await bot.add_cog(OnCommandError(bot))

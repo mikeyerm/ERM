@@ -124,6 +124,39 @@ async def staff_check(bot_obj, guild, member):
     return False
 
 
+async def admin_check(bot_obj, guild, member):
+    guild_settings = await bot_obj.settings.find_by_id(guild.id)
+    if guild_settings:
+        if "admin_role" in guild_settings["staff_management"].keys():
+            if guild_settings["staff_management"]["admin_role"] != "":
+                if isinstance(guild_settings["staff_management"]["admin_role"], list):
+                    for role in guild_settings["staff_management"]["admin_role"]:
+                        if role in [role.id for role in member.roles]:
+                            return True
+                elif isinstance(guild_settings["staff_management"]["admin_role"], int):
+                    if guild_settings["staff_management"]["admin_role"] in [
+                        role.id for role in member.roles
+                    ]:
+                        return True
+        if "management_role" in guild_settings["staff_management"].keys():
+            if guild_settings["staff_management"]["management_role"] != "":
+                if isinstance(
+                    guild_settings["staff_management"]["management_role"], list
+                ):
+                    for role in guild_settings["staff_management"]["management_role"]:
+                        if role in [role.id for role in member.roles]:
+                            return True
+                elif isinstance(
+                    guild_settings["staff_management"]["management_role"], int
+                ):
+                    if guild_settings["staff_management"]["management_role"] in [
+                        role.id for role in member.roles
+                    ]:
+                        return True
+    if member.guild_permissions.administrator:
+        return True
+    return False
+
 def time_converter(parameter: str) -> int:
     conversions = {
         ("s", "seconds", " seconds"): 1,
@@ -635,7 +668,8 @@ async def secure_logging(
     except discord.HTTPException:
         channel = None
     bloxlink_user = await bot.bloxlink.find_roblox(author_id)
-    # # print(bloxlink_user)
+    if not bloxlink_user: # we'll think of a better solution eventually
+        return
     server_status: ServerStatus = await bot.prc_api.get_server_status(guild_id)
     if channel is not None:
         if not attempted:

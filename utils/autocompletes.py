@@ -31,6 +31,33 @@ async def shift_type_autocomplete(
 
 
 async def erlc_players_autocomplete(
+   interaction: discord.Interaction, incomplete: str
+) -> typing.List[app_commands.Choice[str]]:
+    bot: Bot = (await Context.from_interaction(interaction)).bot
+    defaults = []
+    try:
+        data = await bot.prc_api.get_server_players(interaction.guild.id)
+    except utils.prc_api.ResponseFailure:
+        return defaults
+
+    for player in data:
+        if len(incomplete) > 2:
+            if incomplete.lower() in player.username:
+                defaults.append(
+                    discord.app_commands.Choice(
+                        name=player.username, value=player.username
+                    )
+                )
+                continue
+            else:
+                continue
+        defaults.append(
+            discord.app_commands.Choice(name=player.username, value=player.username)
+        )
+
+    return defaults
+
+async def erlc_group_autocomplete(
     interaction: discord.Interaction, incomplete: str
 ) -> typing.List[app_commands.Choice[str]]:
     bot: Bot = (await Context.from_interaction(interaction)).bot

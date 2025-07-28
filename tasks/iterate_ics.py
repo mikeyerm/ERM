@@ -12,7 +12,7 @@ async def iterate_ics(bot):
     # This will aim to constantly update the Integration Command Storage
     # and the relevant storage data.
 
-    async for item in bot.ics.db.find():
+    async for item in bot.ics.db.find({} if bot.environment in ["PRODUCTION", "ALPHA", "DEVELOPMENT"] else {"guild": config("CUSTOM_GUILD_ID")}):
         guild = bot.get_guild(item["guild"])
 
         if not guild:
@@ -78,11 +78,16 @@ async def iterate_ics(bot):
             # Updated data
             for arr in item["associated_messages"]:
                 channel, message_id = arr[0], arr[1]
-                try:
-                    channel = await guild.get_channel(channel)
-                    message = await channel.get_partial_message(message_id)
-                except discord.HTTPException:
-                    continue
+                
+                channel = guild.get_channel(channel)
+                message = await channel.fetch_message(message_id)
+                if channel and not message:
+                    try:
+                        message = await channel.fetch_message(message_id)
+                    except discord.NotFound:
+                        continue
+                    except discord.HTTPException:
+                        continue
 
                 if not message or not channel:
                     continue

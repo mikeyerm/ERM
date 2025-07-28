@@ -691,11 +691,8 @@ class ShiftLogging(commands.Cog):
                         if shift_list:
                             shift_type = shift_list[0]
                         else:
-                            return await new_failure_embed(
-                                ctx,
-                                "Critical Error",
-                                "if you somehow encounter this error, please contact [ERM Support](https://discord.gg/FAC629TzBy)",
-                            )
+                            shift_type = shift_types[0] # default to zero - instead of error
+
                 else:
                     return
 
@@ -897,14 +894,10 @@ class ShiftLogging(commands.Cog):
                             for i in shift_types
                             if i["name"].lower() == shift_type_str.lower()
                         ]
-                        if shift_list:
+                        if len(shift_list) > 0:
                             shift_type = shift_list[0]
                         else:
-                            return await new_failure_embed(
-                                ctx,
-                                "Critical Error",
-                                "if you somehow encounter this error, please contact [ERM Support](https://discord.gg/FAC629TzBy)",
-                            )
+                            shift_type = shift_types[0] # default to zero - instead of error
                 else:
                     return
 

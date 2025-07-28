@@ -96,7 +96,7 @@ async def unprimitive_guild_process(items, bot):
     settings = await bot.settings.find_by_id(guild.id)
     erlc_settings = settings.get("ERLC", {})
 
-    if await bot.whitelabel.db.find_one({"GuildID": guild.id}) and not config("CUSTOM_GUILD_ID") == str(guild.id):
+    if await bot.whitelabel.db.find_one({"GuildID": str(guild.id)}) and not config("CUSTOM_GUILD_ID") == str(guild.id):
         logging.warning("Not handling {} due to whitelabel instance existing")
         return
 

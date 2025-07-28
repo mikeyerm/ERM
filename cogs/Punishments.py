@@ -281,7 +281,7 @@ class Punishments(commands.Cog):
             .set_thumbnail(url=thumbnail)
         )
 
-        if "autoban" in flags:
+        if "autoban" in flags and (await admin_predicate(ctx) or await management_predicate(ctx)):
             try:
                 await self.bot.prc_api.run_command(
                     ctx.guild.id, ":ban {}".format(warning.user_id)

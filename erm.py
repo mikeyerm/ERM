@@ -396,7 +396,7 @@ async def AutoDefer(ctx: commands.Context):
                 raise Exception(f"Guild not permitted to use this bot: {ctx.guild.id}")
 
     guild_id = ctx.guild.id
-    doc = await bot.whitelabel.db.find_one({"GuildID": guild_id})
+    doc = await bot.whitelabel.db.find_one({"GuildID": str(guild_id)})
     if doc:
         # must be a whitelabel instance. are we the whitelabel instance?
         if environment == "CUSTOM" and int(config("CUSTOM_GUILD_ID")) == guild_id:
@@ -474,7 +474,7 @@ async def on_message(
                 )
                 return
 
-    if environment == "PRODUCTION" and await bot.whitelabel.db.find_one({"GuildID": message.guild.id}) is not None:
+    if environment == "PRODUCTION" and await bot.whitelabel.db.find_one({"GuildID": str(message.guild.id)}) is not None:
         return
 
     await bot.process_commands(message)

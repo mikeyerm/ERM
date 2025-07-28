@@ -13,7 +13,7 @@ from decouple import config
 
 
 async def iterate_reminder(bot, guildObj): # TODO: do a refactor of this.. this is abundantly terrible programming.
-    if await bot.whitelabel.db.find_one({"GuildID": guildObj["_id"]}) is not None and bot.environment == "PRODUCTION":
+    if await bot.whitelabel.db.find_one({"GuildID": str(guildObj["_id"])}) is not None and bot.environment == "PRODUCTION":
         return
 
     for item in guildObj["reminders"].copy():

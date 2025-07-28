@@ -1,5 +1,6 @@
 import asyncio
 import datetime
+import string
 import typing
 import discord
 import pytz
@@ -32,6 +33,7 @@ from utils.utils import (
     generator,
     ArgumentMockingInstance,
     config_change_log,
+    admin_check,
 )
 import gspread
 import random
@@ -616,7 +618,7 @@ class ColouredButton(discord.ui.Button):
 
 
 class CustomExecutionButton(discord.ui.Button):
-    def __init__(self, user_id, label, style, emoji=None, func=None, row=0):
+    def __init__(self, user_id, label, style, emoji=None, func=None, row=0, disabled=False):
         """
 
         A button used for custom execution functions. This is often used to subvert pagination limitations.
@@ -628,7 +630,7 @@ class CustomExecutionButton(discord.ui.Button):
         :param func: function to be executed when pressed
         """
 
-        super().__init__(label=label, style=style, emoji=emoji, row=row)
+        super().__init__(label=label, style=style, emoji=emoji, row=row, disabled=disabled)
         self.func = func
         self.user_id = user_id
 
@@ -930,17 +932,10 @@ class LOAMenu(discord.ui.View):
         # await interaction.response.defer()
         await interaction.response.defer(ephemeral=True, thinking=True)
 
-        if not any(
-            role in [r.id for r in interaction.user.roles] for role in self.roles
-        ):
-            # await interaction.response.defer(ephemeral=True, thinking=True)
-            if (
-                not interaction.user.guild_permissions.manage_guild
-                and not interaction.user.guild_permissions.administrator
-                and not interaction.user == interaction.guild.owner
-            ):
-                await generalised_interaction_check_failure(interaction.followup)
-                return
+        # checking for admin permission as opposed to roles - property kept for legacy
+        if not await admin_check(self.bot, interaction.guild, interaction.user):
+            await generalised_interaction_check_failure(interaction.followup)
+            return
 
         for item in self.children:
             item.disabled = True
@@ -1031,16 +1026,11 @@ class LOAMenu(discord.ui.View):
         custom_id="loamenu:deny",
     )
     async def no(self, interaction: discord.Interaction, button: discord.ui.Button):
-        if not any(
-            role in [r.id for r in interaction.user.roles] for role in self.roles
-        ):
-            if (
-                not interaction.user.guild_permissions.manage_guild
-                and not interaction.user.guild_permissions.administrator
-                and not interaction.user == interaction.guild.owner
-            ):
-                await interaction.response.defer(ephemeral=True, thinking=True)
-                return await generalised_interaction_check_failure(interaction.followup)
+        # checking for admin permission as opposed to roles - property kept for legacy
+        if not await admin_check(self.bot, interaction.guild, interaction.user):
+            await interaction.response.defer(ephemeral=True, thinking=True)
+            return await generalised_interaction_check_failure(interaction.followup)
+        
         for item in self.children:
             item.disabled = True
 
@@ -3855,6 +3845,7 @@ class ActionCreationToolkit(discord.ui.View):
             "Delay",
             "Add Role",
             "Remove Role",
+            "Execute ERM Command"
         ]
 
         extras = ["Remove Last Integration"]
@@ -4013,20 +4004,13 @@ class ActionCreationToolkit(discord.ui.View):
             "Delay": 1,
             "Add Role": 1,
             "Remove Role": 1,
+            "Execute ERM Command": 1,
         }
         if not correspondents[button_name]:
             msg = interaction.message
             embed = msg.embeds[-1]
 
-            if len(self.action_data["Integrations"]) == 0:
-                msg.embeds[-1].description = embed.description[
-                    : -(len("No Integrations"))
-                ]
-            else:
-                msg.embeds[-1].description = embed.description[
-                    : -(len("*New Integration*"))
-                ]
-
+            msg.embeds[-1].description = msg.embeds[-1].description.replace("No Integrations", "").replace("*New Integration*", "")
             if (
                 len(f" **{button_name}**\n> *New Integration*")
                 + len(msg.embeds[-1].description)
@@ -4055,6 +4039,7 @@ class ActionCreationToolkit(discord.ui.View):
                         "Delay": 6,
                         "Add Role": 7,
                         "Remove Role": 8,
+                        "Execute ERM Command": 9
                     }[button_name],
                     "ExtraInformation": None,
                 }
@@ -4079,6 +4064,7 @@ class ActionCreationToolkit(discord.ui.View):
                 "Delay": ["Time (Seconds)", 1],
                 "Add Role": ["Role ID", 0],
                 "Remove Role": ["Role ID", 0],
+                "Execute ERM Command": ["Command (without prefix)", 1],
             }
 
             view = CustomModalView(
@@ -4163,96 +4149,52 @@ class ActionCreationToolkit(discord.ui.View):
                     else:
                         return await static_validation_failure()
 
-                self.action_data["Integrations"].append(
-                    {
-                        "IntegrationName": button_name,
-                        "IntegrationID": {
-                            "Execute Custom Command": 0,
-                            "Toggle Reminder": 1,
-                            "Force All Staff Off Duty": 2,
-                            "Send ER:LC Command": 3,
-                            "Send ER:LC Message": 4,
-                            "Send ER:LC Hint": 5,
-                            "Delay": 6,
-                            "Add Role": 7,
-                            "Remove Role": 8,
-                        }[button_name],
-                        "ExtraInformation": provided_information,
-                    }
+            if "Command (without prefix)" in button_name:
+                # strip possible prefix
+                provided_information = provided_information.strip()
+                if provided_information[0] not in [*string.ascii_lowercase, *string.ascii_uppercase]:
+                    provided_information = provided_information[1:]
+
+            self.action_data["Integrations"].append(
+                {
+                    "IntegrationName": button_name,
+                    "IntegrationID": {
+                        "Execute Custom Command": 0,
+                        "Toggle Reminder": 1,
+                        "Force All Staff Off Duty": 2,
+                        "Send ER:LC Command": 3,
+                        "Send ER:LC Message": 4,
+                        "Send ER:LC Hint": 5,
+                        "Delay": 6,
+                        "Add Role": 7,
+                        "Remove Role": 8,
+                        "Execute ERM Command": 9
+                    }[button_name],
+                    "ExtraInformation": provided_information,
+                }
+            )
+            msg = interaction.message
+            embed = msg.embeds[-1]
+            msg.embeds[-1].description = msg.embeds[-1].description.replace("No Integrations", "").replace("*New Integration*", "")
+
+
+            if (
+                len(
+                    f" **{button_name}:** {provided_information}\n> *New Integration*"
                 )
-                msg = interaction.message
-                embed = msg.embeds[-1]
-                if len(self.action_data["Integrations"]) == 0:
-                    msg.embeds[-1].description = embed.description[
-                        : -(len("No Integrations"))
-                    ]
-                else:
-                    msg.embeds[-1].description = embed.description[
-                        : -(len("*New Integration*"))
-                    ]
-
-                if (
-                    len(
-                        f" **{button_name}:** {provided_information}\n> *New Integration*"
-                    )
-                    + len(msg.embeds[-1].description)
-                ) > 4000:
-                    embed = discord.Embed(
-                        title="\u200b", color=BLANK_COLOR, description="> "
-                    )
-                    embed.description += f" **{button_name}:** {provided_information}\n> *New Integration*"
-                    msg.embeds.append(embed)
-                else:
-                    embed.description += f" **{button_name}:** {provided_information}\n> *New Integration*"
-                    # msg.embeds.append(embed)
-                    msg.embeds[len(msg.embeds) - 1] = embed
-
-                await interaction.message.edit(embeds=msg.embeds)
-
+                + len(msg.embeds[-1].description)
+            ) > 4000:
+                embed = discord.Embed(
+                    title="\u200b", color=BLANK_COLOR, description="> "
+                )
+                embed.description += f" **{button_name}:** {provided_information}\n> *New Integration*"
+                msg.embeds.append(embed)
             else:
+                embed.description += f" **{button_name}:** {provided_information}\n> *New Integration*"
+                msg.embeds[len(msg.embeds) - 1] = embed
 
-                self.action_data["Integrations"].append(
-                    {
-                        "IntegrationName": button_name,
-                        "IntegrationID": {
-                            "Execute Custom Command": 0,
-                            "Toggle Reminder": 1,
-                            "Force All Staff Off Duty": 2,
-                            "Send ER:LC Command": 3,
-                            "Send ER:LC Message": 4,
-                            "Send ER:LC Hint": 5,
-                            "Delay": 6,
-                            "Add Role": 7,
-                            "Remove Role": 8,
-                        }[button_name],
-                        "ExtraInformation": provided_information,
-                    }
-                )
+            await interaction.message.edit(embeds=msg.embeds)
 
-                msg = interaction.message
-                embed = msg.embeds[-1]
-                if len(self.action_data["Integrations"]) == 0:
-                    embed.description = embed.description[: -(len("No Integrations"))]
-                else:
-                    embed.description = embed.description[: -(len("*New Integration*"))]
-
-                if (
-                    len(
-                        f" **{button_name}:** {provided_information}\n> *New Integration*"
-                    )
-                    + len(msg.embeds[-1].description)
-                ) > 4000:
-                    embed = discord.Embed(
-                        title="\u200b", color=BLANK_COLOR, description="> "
-                    )
-                    embed.description += f" **{button_name}:** {provided_information}\n> *New Integration*"
-                    msg.embeds.append(embed)
-                else:
-                    embed.description += f" **{button_name}:** {provided_information}\n> *New Integration*"
-                    # msg.embeds.append(embed)
-                    msg.embeds[len(msg.embeds) - 1] = embed
-
-                await interaction.message.edit(embeds=msg.embeds)
 
 
 class LinkView(discord.ui.View):
@@ -12104,9 +12046,7 @@ class AccountLinkingMenu(discord.ui.View):
             return
 
         msg = self.sustained_interaction.message if self.sustained_interaction else None
-        await interaction.response.send_modal(
-            (
-                modal := CustomModal(
+        modal = CustomModal(
                     "Legacy Code Verification",
                     [
                         (
@@ -12119,9 +12059,10 @@ class AccountLinkingMenu(discord.ui.View):
                                 )
                             ),
                         )
-                    ],
-                )
-            )
+            ],
+        )
+        await interaction.response.send_modal(
+            modal
         )
         timeout = await modal.wait()
         if timeout:
@@ -12192,7 +12133,8 @@ class AccountLinkingMenu(discord.ui.View):
                     title=f"{self.bot.emoji_controller.get_emoji('success')} Successfully Linked",
                     description=f"You have been successfully linked to **{new_user.name}**.",
                     color=GREEN_COLOR,
-                )
+                ),
+                view=None
             )
         else:
             await msg.edit(

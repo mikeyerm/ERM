@@ -4,11 +4,13 @@ import asyncio
 import datetime
 import pytz
 from erm import is_management, is_staff, is_admin
+from utils.advanced import FakeMessage
 from utils.constants import BLANK_COLOR, GREEN_COLOR
 from menus import ManageActions, CounterButton, ViewVotersButton
 from discord import app_commands
 from utils.autocompletes import action_autocomplete
-from utils.utils import interpret_content, interpret_embed, log_command_usage
+from utils.paginators import CustomPage, SelectPagination
+from utils.utils import get_prefix, interpret_content, interpret_embed, log_command_usage
 
 
 class Actions(commands.Cog):
@@ -59,7 +61,17 @@ class Actions(commands.Cog):
         embeds.append(current_embed)
 
         view = ManageActions(self.bot, ctx.author.id)
-        await ctx.send(embeds=embeds, view=view)
+        if len(embeds) > 9:
+            paginator = SelectPagination(
+                self.bot, ctx.author.id, [CustomPage(
+                    embeds=embeds[i],
+                    view=view,
+                    identifier=i
+                ) for i in range(len(embeds))], timeout=60
+            )
+            await ctx.send(embeds=embeds[0].embeds, view=paginator.get_current_view())
+        else:
+            await ctx.send(embeds=embeds, view=view)
         timeout = await view.wait()
         if timeout:
             return
@@ -133,6 +145,7 @@ class Actions(commands.Cog):
             self.delay,
             self.add_role,
             self.remove_role,
+            self.execute_erm_command
         ]
 
         if not dnr:
@@ -377,6 +390,22 @@ class Actions(commands.Cog):
 
         if command_response[0] != 429:
             return 1
+        
+    @staticmethod
+    async def execute_erm_command(bot, guild_id: int, context, command: str):
+        guild: discord.Guild = bot.get_guild(guild_id) or await bot.fetch_guild(guild_id)
+        message = FakeMessage(
+            content=bot.user.mention + " " + command,
+            author=context.author,
+            channel=await context.author.create_dm() if context.author else guild.system_channel or guild.text_channels[0],
+            state=bot._connection
+        )
+        message.guild = guild
+        try:
+            await bot.process_commands(message)
+        except:
+            return 1
+        return 0
 
     @staticmethod
     async def send_erlc_hint(bot, guild_id: int, context, hint: str):
@@ -402,10 +431,6 @@ class Actions(commands.Cog):
     @staticmethod
     async def delay(bot, guild_id, context, timer: int):
         ## FOR THIS EXAMPLE, WE DO NOT NEED BOT AND GUILD ID
-        del bot
-        del guild_id
-        del context
-
         try:
             await asyncio.sleep(int(timer))
         except:

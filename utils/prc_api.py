@@ -32,7 +32,7 @@ class BanItem(BaseDataClass):
 
 class CommandLog(BaseDataClass):
     username: str
-    id: int
+    user_id: int
     timestamp: int
     is_automated: bool
     command: str
@@ -75,10 +75,10 @@ class Player(BaseDataClass):
     team: str | None = None
 
 
-class ModCalls(BaseDataClass):
-    Caller: str
-    Moderator: str | None = None
-    Timestamp: int
+class ModCall(BaseDataClass):
+    caller: str
+    moderator: str | None = None
+    timestamp: int
 
 
 class ServerStatus(BaseDataClass):
@@ -117,11 +117,9 @@ class PRCApiClient:
         bot.external_http_sessions.append(self.session)
 
     async def get_server_key(self, guild_id: int) -> ServerKey:
-        # TODO: code server key retrieval
         return await self.bot.server_keys.get_server_key(
             guild_id
-        )  # uses a temporary database for now - uhhh might change, probably not
-        pass
+        ) 
 
     async def _send_api_request(
         self,
@@ -245,13 +243,38 @@ class PRCApiClient:
         )
         if status_code == 200:
             return [
-                ModCalls(
-                    Caller=call["Caller"],
-                    Moderator=call.get("Moderator"),
-                    Timestamp=call["Timestamp"],
+                ModCall(
+                    caller_username=call["Caller"].split(":")[0],
+                    caller_id=call["Caller"].split(":")[1],
+                    moderator_username=call.get("Moderator").split(":")[0] if call.get("Moderator") else None,
+                    moderator_id=call.get("Moderator").split(":")[1] if call.get("Moderator") else None,
+                    timestamp=call["Timestamp"],
                 )
                 for call in response_json
             ]
+        else:
+            raise ResponseFailure(status_code=status_code, json_data=response_json)
+
+    async def get_server_staff(self, guild_id: int) -> list:
+        status_code, response_json = await self._send_api_request(
+            "GET", "/server/staff", guild_id
+        )
+        if status_code == 200:
+            co_owners = response_json.get("CoOwners", [])
+            roblox_client = roblox.Client()
+            co_owner_users = await roblox_client.get_users(co_owners, expand=False)
+            co_owner_names = [user.name for user in co_owner_users]
+            co_owners = dict(zip(co_owners, co_owner_names))
+            
+            players = [Player(username=v, id=k, permission="Server Co-Owner") for k,v in co_owners.items()]
+            players += [Player(
+                username=v, id=k, permission="Server Administrator"
+            ) for k,v in response_json.get("Admins", {}).items()]
+            players += [Player(
+                username=v, id=k, permission="Server Moderator"
+            ) for k,v in response_json.get("Mods", {}).items()]
+
+            return players
         else:
             raise ResponseFailure(status_code=status_code, json_data=response_json)
 

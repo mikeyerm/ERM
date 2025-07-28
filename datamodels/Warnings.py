@@ -260,7 +260,7 @@ class Warnings(Document):
             return await self.db.find_one({"_id": ObjectId(identifier)})
 
         map = {
-            "Snowflake": identifier,
+            "Snowflake": snowflake,
             "Type": warning_type,
             "ModeratorID": moderator_id,
             "UserID": user_id,
@@ -321,7 +321,7 @@ class Warnings(Document):
             warning_type = {"$regex": "bolo", "$options": "i"}
 
         map = {
-            "Snowflake": identifier,
+            "Snowflake": snowflake,
             "Type": warning_type,
             "ModeratorID": moderator_id,
             "UserID": user_id,
