@@ -148,8 +148,18 @@ class Punishments(commands.Cog):
         types = (punishment_types or {}).get("types", [])
     
         preset_types = ["Warning", "Kick", "Ban", "BOLO"]
+
+        enabled_punishments = (punishment_types or {}).get("default_punishments", [])
+        enabled_defaults = {
+            p["name"].lower()
+            for p in enabled_punishments
+            if p.get("enabled", False)
+        }
         actual_types = []
-        for item in preset_types + types:
+        for item in preset_types:
+            if not enabled_defaults or item.lower() in enabled_defaults:
+                actual_types.append(item)
+        for item in types:
             if isinstance(item, str):
                 actual_types.append(item)
             else:

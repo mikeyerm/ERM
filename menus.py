@@ -6875,6 +6875,75 @@ class PunishmentsConfiguration(AssociationConfigurationView):
         )
         await interaction.response.send_message(view=new_view, ephemeral=True)
 
+    @discord.ui.button(label="Default Punishments", row=2)
+    async def default_punishments(
+        self, interaction: discord.Interaction, button: discord.ui.Button
+    ):
+        val = await self.interaction_check(interaction)
+        if val is False:
+            return
+
+        sett = await self.bot.punishment_types.find_by_id(interaction.guild.id)
+
+        view = defaultPunishments(self.bot, sett, interaction.user.id)
+        await interaction.response.send_message(view=view, ephemeral=True)
+
+class defaultPunishments(discord.ui.View):
+    def __init__(self, bot, sett, user_id):
+        super().__init__()
+        self.bot = bot
+        self.sett = sett
+        self.user_id = user_id
+
+        self.default_punishments = ["warning", "kick", "ban", "bolo"]
+
+        raw_punishments = {
+            p["name"]: p.get("enabled", False)
+            for p in sett.get("default_punishments", [])
+        }
+
+        self.warning_enabled = raw_punishments.get("warning", True)
+        self.kick_enabled = raw_punishments.get("kick", True)
+        self.ban_enabled = raw_punishments.get("ban", True)
+        self.bolo_enabled = raw_punishments.get("bolo", True)
+
+        options = [
+            discord.SelectOption(label="Warning", value="Warning", default=self.warning_enabled),
+            discord.SelectOption(label="Kick", value="Kick", default=self.kick_enabled),
+            discord.SelectOption(label="Ban", value="Ban", default=self.ban_enabled),
+            discord.SelectOption(label="BOLO", value="BOLO", default=self.bolo_enabled),
+        ]
+
+        select = discord.ui.Select(
+            placeholder="Select a punishment",
+            options=options,
+            max_values=4,
+            min_values=0,
+        )
+
+        select.callback = self.select_callback
+        self.add_item(select)
+
+    async def select_callback(self, interaction: discord.Interaction):
+        selected = [i.lower() for i in interaction.data["values"]]
+
+        self.sett["default_punishments"] = [
+            {"name": name, "enabled": name in selected}
+            for name in self.default_punishments
+        ]
+
+        await self.bot.punishment_types.update_by_id(
+            self.sett
+        )
+
+        await interaction.response.send_message(
+            embed=discord.Embed(
+                title="Default Punishments Updated",
+                description="The default punishments have been updated.",
+                color=GREEN_COLOR,
+            ),
+            ephemeral=True,
+        )
 
 class GameSecurityConfiguration(AssociationConfigurationView):
     def __init__(self, *args, **kwargs):
@@ -8972,7 +9041,6 @@ class MoreERLCConfiguration(discord.ui.View):
         await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
 
 
-    #======WILL BE IMPLEMENTED IN NEXT UPDATE======
     # @discord.ui.button(label="Whitelist Callsign Checks", row=2)
     # async def whitelist_callsign_checks(
     #     self, interaction: discord.Interaction, button: discord.Button
