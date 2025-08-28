@@ -143,15 +143,22 @@ class PRCApiClient:
         else:
             internal_server_key = key
 
+
+        headers = {
+            "Server-Key": str(internal_server_key).strip(),
+            "Accept": "application/json",  
+        }
+
+        request_kwargs = {"headers": headers}
+        if method == "POST" and data is not None:
+            request_kwargs["json"] = data
+
+        url = f"{self.base_url.rstrip('/')}/{endpoint.lstrip('/')}"
+        
         async with self.session.request(
             method,
-            url=f"{self.base_url}{endpoint}",
-            headers={
-                "Authorization": self.api_key,
-                "User-Agent": "Application",
-                "Server-Key": internal_server_key,
-            },
-            json=data or {},
+            url=url,
+            **request_kwargs
         ) as response:
             # if response.status == 403:
             #     await self.bot.prohibited.insert({
