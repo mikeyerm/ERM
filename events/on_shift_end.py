@@ -151,6 +151,12 @@ class OnShiftEnd(commands.Cog):
             else:
                 moderation_counts[entry.warning_type] = 1
 
+          # ✅ Count total shifts for this staff member in this guild
+        total_shifts = await self.bot.shift_management.shifts.count_documents({
+            "user_id": shift.user_id,
+            "guild": shift.guild
+        })
+
         if channel is not None:
             await channel.send(
                 embed=discord.Embed(title="Shift Ended", color=BLANK_COLOR)
@@ -159,8 +165,11 @@ class OnShiftEnd(commands.Cog):
                     value=(
                         f"> **Staff Member:** {staff_member.mention}\n"
                         f"> **Shift Type:** {shift_type}\n"
+                        f"> **Total Shifts:** {total_shifts}\n"   # total_shifts defined within here - Doesn't rely on prior code
                     ),
                     inline=False,
+                )
+
                 )
                 .add_field(
                     name="Other Information",
@@ -237,3 +246,4 @@ class OnShiftEnd(commands.Cog):
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(OnShiftEnd(bot))
+
